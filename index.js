@@ -1,17 +1,13 @@
 const { Client } = require('pg')
-const http = require('http');
+const http = require('node:http');
+const https = require('node:https');
+const http2 = require('node:http2');
+const fs = require('node:fs');
 
-const connectionString = process.env.CONNECTION_STRING;
+const { CONNECTION_STRING: connectionString, TLS_PATH: tlsPath, HTTP_VERSION: httpVersion, PORT: port = 8080 } = process.env;
 const hostname = '0.0.0.0';
-const port = 8080;
 
-const client = new Client({
-    connectionString
-});
-
-client.connect();
-
-const server = http.createServer((request, response) => {
+function listener(request, response) {
     client.query('SELECT NOW() as now', (err, res) => {
         if (err) {
             console.log(err.stack);
@@ -23,8 +19,27 @@ const server = http.createServer((request, response) => {
             response.end(value);
         }
     });
+}
+
+function createServer() {
+    if (!!tlsPath) {
+        const options = {
+            pfx: fs.readFileSync(tlsPath)
+        }
+        return httpVersion === '2' ? http2.createSecureServer(options, listener) : https.createServer(options, listener);
+    }
+
+    return http.createServer(listener);
+}
+
+const client = new Client({
+    connectionString
 });
 
+client.connect();
+
+const server = createServer();
+
 server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
+    console.log(`Server listening on port ${port}`);
 });
