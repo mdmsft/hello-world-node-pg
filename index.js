@@ -4,7 +4,14 @@ const https = require('node:https');
 const http2 = require('node:http2');
 const fs = require('node:fs');
 
-const { CONNECTION_STRING: connectionString, TLS_PATH: tlsPath, HTTP_VERSION: httpVersion, PORT: port = 8080 } = process.env;
+const {
+    CONNECTION_STRING: connectionString,
+    PFX_PATH: pfxPath,
+    CRT_PATH: crtPath,
+    KEY_PATH: keyPath,
+    HTTP_VERSION: httpVersion,
+    PORT: port = 8080
+} = process.env;
 const hostname = '0.0.0.0';
 
 function listener(request, response) {
@@ -22,14 +29,21 @@ function listener(request, response) {
 }
 
 function createServer() {
-    if (!!tlsPath) {
-        const options = {
-            pfx: fs.readFileSync(tlsPath)
-        }
-        return httpVersion === '2' ? http2.createSecureServer(options, listener) : https.createServer(options, listener);
+    if (!pfxPath && !crtPath && !keyPath) {
+        return http.createServer(listener);
     }
 
-    return http.createServer(listener);
+    let options = {};
+    
+    if (!!pfxPath) {
+        options.pfx = fs.readFileSync(pfxPath);
+    }
+    else if (!!crtPath && !!keyPath) {
+        options.cert = fs.readFileSync(crtPath);
+        options.key = fs.readFileSync(keyPath);
+    }
+    
+    return httpVersion === '2' ? http2.createSecureServer(options, listener) : https.createServer(options, listener);
 }
 
 const client = new Client({

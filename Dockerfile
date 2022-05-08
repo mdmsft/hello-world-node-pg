@@ -9,7 +9,9 @@ ADD index.js package.json package-lock.json ./
 RUN npm i
 
 ENV CONNECTION_STRING=
-ENV TLS_PATH=
+ENV PFX_PATH=
+ENV CRT_PATH=
+ENV KEY_PATH=
 ENV HTTP_VERSION=
 ENV PORT=${PORT}
 
